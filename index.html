@@ -60,17 +60,18 @@ html, body {
 #start-screen {
   display: flex; position: fixed; inset: 0; z-index: 100;
   flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+  background: var(--bay-dunkel);
 }
 #start-screen h1 {
   font-size: 38px; font-weight: 900; letter-spacing: -1px;
-  color: var(--bay-dunkel);
-  text-shadow: 0 1px 0 rgba(255,255,255,.6);
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0,0,0,.4);
 }
 .start-preview { display: flex; align-items: center; gap: 10px; }
-.sp-chip { width: 30px; height: 30px; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,.3); }
-.sp-chip.w { background: #fff; border: 2px solid rgba(0,0,0,.1); }
+.sp-chip { width: 30px; height: 30px; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,.4); }
+.sp-chip.w { background: #fff; border: 2px solid rgba(255,255,255,.3); }
 .sp-chip.b { background: var(--bay-blau); border: 2px solid rgba(255,255,255,.25); }
-.sp-vs { font-size: 17px; font-weight: 800; color: var(--bay-dunkel); }
+.sp-vs { font-size: 17px; font-weight: 800; color: rgba(255,255,255,.65); }
 .start-btns { display: flex; flex-direction: column; gap: 11px; width: 250px; }
 .start-btn {
   padding: 15px; border-radius: 14px; border: none;
@@ -78,8 +79,8 @@ html, body {
   transition: transform .1s, opacity .1s;
 }
 .start-btn:active { transform: scale(.96); opacity: .85; }
-.start-btn.prim { background: var(--bay-dunkel); color: #fff; }
-.start-btn.sec  { background: #fff; color: var(--bay-dunkel); }
+.start-btn.prim { background: #fff; color: var(--bay-dunkel); }
+.start-btn.sec  { background: rgba(255,255,255,.12); color: #fff; }
 
 /* ===== GAME SCREEN ===== */
 #game-screen {
@@ -132,7 +133,7 @@ html, body {
 /* Spielfeld */
 #board-wrap { position: relative; z-index: 1; }
 #board {
-  background: var(--bay-blau);
+  background: #7c3aed;
   border-radius: 13px; padding: 8px;
   display: grid;
   grid-template-columns: repeat(7, var(--cell));
@@ -235,7 +236,7 @@ html, body {
 </div>
 
 <!-- Start-Screen -->
-<div id="start-screen" class="rauten-bg">
+<div id="start-screen">
   <h1>4 Gewinnt</h1>
   <div class="start-preview">
     <div class="sp-chip w"></div>
