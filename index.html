@@ -16,7 +16,7 @@
   --bay-blau-hell: #1565C0;
   --bay-dunkel: #002060;
   --board-bg: #001A4D;
-  --cell-empty: #000f30;
+  --cell-empty: #000820;
   --cell: 44px;
   --gap: 4px;
 }
@@ -123,29 +123,22 @@ html, body {
   flex: 1; display: flex; align-items: center; justify-content: center;
   position: relative; overflow: hidden;
 }
-/* Rautenmuster als Pseudo-Element damit background-clip nicht nötig */
+/* Dunkler Hintergrund hinter dem Spielfeld */
 #board-area::before {
   content: ''; position: absolute; inset: 0;
-  background-image:
-    linear-gradient(135deg, var(--bay-blau) 25%, transparent 25%),
-    linear-gradient(225deg, var(--bay-blau) 25%, transparent 25%),
-    linear-gradient(315deg, var(--bay-blau) 25%, transparent 25%),
-    linear-gradient(45deg,  var(--bay-blau) 25%, transparent 25%);
-  background-size: 28px 28px;
-  background-color: #fff;
-  background-position: 0 0, 14px 0, 14px -14px, 0 14px;
+  background: #000c1f;
 }
 
 /* Spielfeld */
 #board-wrap { position: relative; z-index: 1; }
 #board {
-  background: var(--board-bg);
+  background: var(--bay-blau);
   border-radius: 13px; padding: 8px;
   display: grid;
   grid-template-columns: repeat(7, var(--cell));
   grid-template-rows: repeat(6, var(--cell));
   gap: var(--gap);
-  box-shadow: 0 8px 28px rgba(0,0,0,.55), 0 0 0 2px rgba(255,255,255,.08);
+  box-shadow: 0 8px 32px rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,.12);
 }
 .cell {
   width: var(--cell); height: var(--cell); border-radius: 50%;
