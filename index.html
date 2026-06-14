@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#002060">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="4 Gewinnt">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<title>4 Gewinnt</title>
+<style>
+:root {
+  --bay-blau: #003F8A;
+  --bay-blau-hell: #1565C0;
+  --bay-dunkel: #002060;
+  --board-bg: #001A4D;
+  --cell-empty: #000f30;
+  --cell: 44px;
+  --gap: 4px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  background: var(--bay-dunkel);
+  color: #fff;
+  user-select: none; -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* ===== PORTRAIT WARNING ===== */
+#portrait-warn {
+  display: none;
+  position: fixed; inset: 0; z-index: 900;
+  background: var(--bay-dunkel);
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; text-align: center; padding: 32px;
+}
+@media (orientation: portrait) { #portrait-warn { display: flex; } }
+#portrait-warn .pw-icon { font-size: 52px; animation: spin-hint 2.5s ease-in-out infinite; }
+@keyframes spin-hint { 0%,100%{transform:rotate(0)} 35%{transform:rotate(90deg)} 75%{transform:rotate(90deg)} }
+#portrait-warn h2 { font-size: 22px; font-weight: 700; }
+#portrait-warn p { font-size: 14px; color: rgba(255,255,255,.65); }
+
+/* ===== RAUTENMUSTER ===== */
+.rauten-bg {
+  background-image:
+    linear-gradient(135deg, var(--bay-blau) 25%, transparent 25%),
+    linear-gradient(225deg, var(--bay-blau) 25%, transparent 25%),
+    linear-gradient(315deg, var(--bay-blau) 25%, transparent 25%),
+    linear-gradient(45deg,  var(--bay-blau) 25%, transparent 25%);
+  background-size: 28px 28px;
+  background-color: #fff;
+  background-position: 0 0, 14px 0, 14px -14px, 0 14px;
+}
+
+/* ===== START SCREEN ===== */
+#start-screen {
+  display: flex; position: fixed; inset: 0; z-index: 100;
+  flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+}
+#start-screen h1 {
+  font-size: 38px; font-weight: 900; letter-spacing: -1px;
+  color: var(--bay-dunkel);
+  text-shadow: 0 1px 0 rgba(255,255,255,.6);
+}
+.start-preview { display: flex; align-items: center; gap: 10px; }
+.sp-chip { width: 30px; height: 30px; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,.3); }
+.sp-chip.w { background: #fff; border: 2px solid rgba(0,0,0,.1); }
+.sp-chip.b { background: var(--bay-blau); border: 2px solid rgba(255,255,255,.25); }
+.sp-vs { font-size: 17px; font-weight: 800; color: var(--bay-dunkel); }
+.start-btns { display: flex; flex-direction: column; gap: 11px; width: 250px; }
+.start-btn {
+  padding: 15px; border-radius: 14px; border: none;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  transition: transform .1s, opacity .1s;
+}
+.start-btn:active { transform: scale(.96); opacity: .85; }
+.start-btn.prim { background: var(--bay-dunkel); color: #fff; }
+.start-btn.sec  { background: #fff; color: var(--bay-dunkel); }
+
+/* ===== GAME SCREEN ===== */
+#game-screen {
+  display: none; flex-direction: column;
+  height: 100%; height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Header */
+#hdr {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; background: var(--bay-dunkel);
+  flex-shrink: 0; min-height: 46px;
+}
+.pb {
+  display: flex; align-items: center; gap: 7px;
+  padding: 4px 8px; border-radius: 10px;
+  transition: background .2s;
+}
+.pb.active { background: rgba(255,255,255,.14); }
+.pb.p2 { flex-direction: row-reverse; }
+.pb-chip { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; }
+.pb-chip.w { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.pb-chip.b { background: var(--bay-blau-hell); border: 1.5px solid rgba(255,255,255,.35); }
+.pb-name { font-size: 11px; font-weight: 600; white-space: nowrap; color: rgba(255,255,255,.8); }
+.pb-score { font-size: 21px; font-weight: 800; min-width: 22px; }
+.pb.p2 .pb-score { text-align: right; }
+#hdr-mid { flex: 1; text-align: center; font-size: 11px; font-weight: 600; color: rgba(255,255,255,.7); }
+#btn-info {
+  background: rgba(255,255,255,.14); border: none; color: #fff;
+  height: 28px; padding: 0 9px; border-radius: 8px;
+  font-size: 11px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+}
+#btn-info:active { background: rgba(255,255,255,.28); }
+
+/* Board Area */
+#board-area {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+/* Rautenmuster als Pseudo-Element damit background-clip nicht nötig */
+#board-area::before {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    linear-gradient(135deg, var(--bay-blau) 25%, transparent 25%),
+    linear-gradient(225deg, var(--bay-blau) 25%, transparent 25%),
+    linear-gradient(315deg, var(--bay-blau) 25%, transparent 25%),
+    linear-gradient(45deg,  var(--bay-blau) 25%, transparent 25%);
+  background-size: 28px 28px;
+  background-color: #fff;
+  background-position: 0 0, 14px 0, 14px -14px, 0 14px;
+}
+
+/* Spielfeld */
+#board-wrap { position: relative; z-index: 1; }
+#board {
+  background: var(--board-bg);
+  border-radius: 13px; padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(7, var(--cell));
+  grid-template-rows: repeat(6, var(--cell));
+  gap: var(--gap);
+  box-shadow: 0 8px 28px rgba(0,0,0,.55), 0 0 0 2px rgba(255,255,255,.08);
+}
+.cell {
+  width: var(--cell); height: var(--cell); border-radius: 50%;
+  background: var(--cell-empty);
+  transition: background .1s;
+}
+.cell.w { background: #fff; box-shadow: inset 0 -3px 0 rgba(0,0,0,.1), 0 2px 5px rgba(255,255,255,.15); }
+.cell.b { background: var(--bay-blau-hell); box-shadow: inset 0 -3px 0 rgba(0,0,0,.18), 0 2px 5px rgba(21,101,192,.35); }
+.cell.win { animation: wpulse .45s ease-in-out infinite alternate; }
+@keyframes wpulse {
+  from { box-shadow: 0 0 4px rgba(255,255,255,.4); }
+  to   { box-shadow: 0 0 18px rgba(255,255,200,.95), 0 0 6px rgba(255,255,255,.7); }
+}
+
+/* Spalten-Tap-Overlay */
+#col-ov {
+  position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px;
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--gap);
+  border-radius: 5px; overflow: hidden;
+}
+.col-tap { cursor: pointer; transition: background .1s; }
+.col-tap:hover { background: rgba(255,255,255,.12); }
+.col-tap:active { background: rgba(255,255,255,.22); }
+
+/* KI-Anzeige */
+#ai-ind {
+  display: none; position: absolute; z-index: 10;
+  top: 12px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,10,40,.8); border-radius: 20px;
+  padding: 4px 14px; font-size: 11px; font-weight: 600;
+  color: rgba(255,255,255,.85); white-space: nowrap;
+}
+#ai-ind.show { display: block; }
+
+/* Gewinn-Banner */
+#win-banner {
+  display: none; position: absolute; z-index: 20;
+  top: 50%; left: 50%; transform: translate(-50%,-50%);
+  background: rgba(0,15,55,.96);
+  border: 1.5px solid rgba(255,255,255,.18);
+  border-radius: 18px; padding: 18px 28px; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6); min-width: 200px;
+}
+#win-banner.show { display: block; }
+#win-text { font-size: 17px; font-weight: 800; margin-bottom: 5px; }
+#win-sub  { font-size: 12px; color: rgba(255,255,255,.65); margin-bottom: 14px; }
+.win-btns { display: flex; gap: 8px; justify-content: center; }
+.win-btn { padding: 9px 18px; border-radius: 10px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; }
+.win-btn.again { background: var(--bay-blau); color: #fff; }
+.win-btn.menu  { background: rgba(255,255,255,.14); color: #fff; }
+.win-btn:active { opacity: .8; }
+
+/* ===== INFO OVERLAY ===== */
+#info-overlay {
+  display: none; position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,.5);
+}
+#info-overlay.show { display: flex; align-items: flex-end; }
+#info-sheet {
+  background: #111e3a; border-radius: 20px 20px 0 0; width: 100%;
+  max-height: 72vh; display: flex; flex-direction: column;
+  box-shadow: 0 -4px 20px rgba(0,0,0,.4);
+}
+#info-hd {
+  padding: 14px 16px 10px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,.1); flex-shrink: 0;
+}
+#info-hd strong { font-size: 15px; }
+#btn-info-close {
+  background: rgba(255,255,255,.1); border: none; border-radius: 16px;
+  padding: 5px 14px; font-size: 13px; cursor: pointer; color: #fff;
+}
+#info-body {
+  overflow-y: auto; padding: 14px 16px calc(20px + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch; font-size: 14px; line-height: 1.6;
+  color: rgba(255,255,255,.82);
+}
+#info-body h3 {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: rgba(255,255,255,.45);
+  margin: 14px 0 5px;
+}
+#info-body p { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<!-- Portrait-Warnung -->
+<div id="portrait-warn">
+  <div class="pw-icon">📱</div>
+  <h2>Bitte drehen</h2>
+  <p>4 Gewinnt läuft im Querformat</p>
+</div>
+
+<!-- Start-Screen -->
+<div id="start-screen" class="rauten-bg">
+  <h1>4 Gewinnt</h1>
+  <div class="start-preview">
+    <div class="sp-chip w"></div>
+    <span class="sp-vs">vs</span>
+    <div class="sp-chip b"></div>
+  </div>
+  <div class="start-btns">
+    <button class="start-btn prim" onclick="startGame('2p')">&#128101; 2 Spieler</button>
+    <button class="start-btn sec"  onclick="startGame('ki')">&#129302; Gegen KI</button>
+  </div>
+</div>
+
+<!-- Spiel-Screen -->
+<div id="game-screen">
+
+  <!-- Header -->
+  <div id="hdr">
+    <div class="pb p1 active" id="p1b">
+      <div class="pb-chip w"></div>
+      <div class="pb-name" id="p1name">Weiß</div>
+      <div class="pb-score" id="p1score">0</div>
+    </div>
+
+    <div id="hdr-mid" id="turn-mid">–</div>
+
+    <div class="pb p2" id="p2b">
+      <div class="pb-score" id="p2score">0</div>
+      <div class="pb-name" id="p2name">Blau</div>
+      <div class="pb-chip b"></div>
+    </div>
+
+    <button id="btn-info" onclick="document.getElementById('info-overlay').classList.add('show')">Info</button>
+  </div>
+
+  <!-- Spielfeld -->
+  <div id="board-area">
+    <div id="board-wrap">
+      <div id="board"></div>
+      <div id="col-ov"></div>
+      <div id="ai-ind">KI denkt…</div>
+    </div>
+    <div id="win-banner">
+      <div id="win-text">Weiß gewinnt! 🎉</div>
+      <div id="win-sub">Stand: 0 : 0</div>
+      <div class="win-btns">
+        <button class="win-btn again" onclick="playAgain()">Nochmal</button>
+        <button class="win-btn menu"  onclick="showMenu()">Menü</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /game-screen -->
+
+<!-- Info Overlay -->
+<div id="info-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div id="info-sheet">
+    <div id="info-hd">
+      <strong>ℹ️ 4 Gewinnt</strong>
+      <button id="btn-info-close" onclick="document.getElementById('info-overlay').classList.remove('show')">Schließen</button>
+    </div>
+    <div id="info-body">
+      <h3>Ziel</h3>
+      <p>Verbinde als Erster 4 eigene Chips in einer Reihe – waagerecht, senkrecht oder diagonal.</p>
+      <h3>Spielmodi</h3>
+      <p><strong>2 Spieler:</strong> Beide tippen abwechselnd auf eine Spalte. Weiß beginnt.</p>
+      <p><strong>Gegen KI:</strong> Du spielst Weiß, die KI spielt Blau und denkt bis zu 5 Züge voraus.</p>
+      <h3>Farben</h3>
+      <p>Weiß und Blau – die Farben des bayerischen Rautenmusters. Weiß zieht immer zuerst.</p>
+      <h3>Punkte</h3>
+      <p>Pro Sieg ein Punkt. Bei Unentschieden gibt es keinen Punkt.</p>
+      <h3>Version</h3>
+      <p>v1.0 · <a href="https://github.com/sEppofaz/4gewinnt" style="color:#6ba3e0">GitHub</a></p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== KONSTANTEN =====
+const ROWS = 6, COLS = 7;
+
+// ===== STATE =====
+let board, curPlayer, scores, gameOver, mode, aiRunning;
+
+// ===== START =====
+function startGame(m) {
+  mode = m;
+  scores = [0, 0];
+  document.getElementById('start-screen').style.display = 'none';
+  const gs = document.getElementById('game-screen');
+  gs.style.display = 'flex';
+  document.getElementById('p1name').textContent = m === 'ki' ? 'Du' : 'Weiß';
+  document.getElementById('p2name').textContent = m === 'ki' ? 'KI' : 'Blau';
+  updateCellSize();
+  buildBoard();
+  resetGame();
+}
+
+function showMenu() {
+  document.getElementById('win-banner').classList.remove('show');
+  document.getElementById('game-screen').style.display = 'none';
+  document.getElementById('start-screen').style.display = 'flex';
+}
+
+function resetGame() {
+  board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+  curPlayer = 1; gameOver = false; aiRunning = false;
+  document.getElementById('win-banner').classList.remove('show');
+  renderBoard();
+  updateHdr();
+}
+
+function playAgain() {
+  document.getElementById('win-banner').classList.remove('show');
+  resetGame();
+}
+
+// ===== BOARD =====
+function buildBoard() {
+  const boardEl = document.getElementById('board');
+  const ovEl    = document.getElementById('col-ov');
+  boardEl.innerHTML = '';
+  ovEl.innerHTML = '';
+
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) {
+      const d = document.createElement('div');
+      d.className = 'cell';
+      d.id = 'c' + r + '_' + c;
+      boardEl.appendChild(d);
+    }
+
+  for (let c = 0; c < COLS; c++) {
+    const d = document.createElement('div');
+    d.className = 'col-tap';
+    d.dataset.col = c;
+    d.addEventListener('touchstart', onTap, {passive: false});
+    d.addEventListener('mousedown', onTap);
+    ovEl.appendChild(d);
+  }
+}
+
+function renderBoard() {
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) {
+      const el = document.getElementById('c' + r + '_' + c);
+      el.className = 'cell';
+      if (board[r][c] === 1) el.classList.add('w');
+      else if (board[r][c] === 2) el.classList.add('b');
+    }
+}
+
+// ===== INPUT =====
+function onTap(e) {
+  if (e.type === 'touchstart') e.preventDefault();
+  if (gameOver || aiRunning) return;
+  if (mode === 'ki' && curPlayer === 2) return;
+  doMove(parseInt(this.dataset.col));
+}
+
+// ===== SPIELLOGIK =====
+function dropRow(col) {
+  for (let r = ROWS - 1; r >= 0; r--)
+    if (board[r][col] === 0) return r;
+  return -1;
+}
+
+function doMove(col) {
+  const row = dropRow(col);
+  if (row < 0) return;
+
+  board[row][col] = curPlayer;
+  renderBoard();
+
+  const wins = checkWin(row, col, curPlayer);
+  if (wins) {
+    gameOver = true;
+    wins.forEach(([r,c]) => document.getElementById('c'+r+'_'+c).classList.add('win'));
+    scores[curPlayer - 1]++;
+    updateHdr();
+    const p1n = document.getElementById('p1name').textContent;
+    const p2n = document.getElementById('p2name').textContent;
+    const name = curPlayer === 1 ? p1n : p2n;
+    document.getElementById('win-text').textContent = name + ' gewinnt! 🎉';
+    document.getElementById('win-sub').textContent = 'Stand: ' + scores[0] + ' : ' + scores[1];
+    setTimeout(() => document.getElementById('win-banner').classList.add('show'), 550);
+    return;
+  }
+
+  if (isDraw()) {
+    gameOver = true;
+    document.getElementById('win-text').textContent = 'Unentschieden!';
+    document.getElementById('win-sub').textContent = 'Stand: ' + scores[0] + ' : ' + scores[1];
+    setTimeout(() => document.getElementById('win-banner').classList.add('show'), 350);
+    return;
+  }
+
+  curPlayer = curPlayer === 1 ? 2 : 1;
+  updateHdr();
+
+  if (mode === 'ki' && curPlayer === 2) {
+    aiRunning = true;
+    document.getElementById('ai-ind').classList.add('show');
+    setTimeout(aiMove, 320);
+  }
+}
+
+function aiMove() {
+  document.getElementById('ai-ind').classList.remove('show');
+  aiRunning = false;
+  const col = bestMove(board, 5);
+  if (col >= 0) doMove(col);
+}
+
+function isDraw() {
+  return board[0].every(v => v !== 0);
+}
+
+// ===== WIN CHECK =====
+function checkWin(row, col, player) {
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for (const [dr,dc] of dirs) {
+    const cells = [[row,col]];
+    for (let i = 1; i < 4; i++) {
+      const r = row+dr*i, c = col+dc*i;
+      if (r<0||r>=ROWS||c<0||c>=COLS||board[r][c]!==player) break;
+      cells.push([r,c]);
+    }
+    for (let i = 1; i < 4; i++) {
+      const r = row-dr*i, c = col-dc*i;
+      if (r<0||r>=ROWS||c<0||c>=COLS||board[r][c]!==player) break;
+      cells.push([r,c]);
+    }
+    if (cells.length >= 4) return cells;
+  }
+  return null;
+}
+
+function quickWin(b, row, col, p) {
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for (const [dr,dc] of dirs) {
+    let n = 1;
+    for (let i=1;i<4;i++){const r=row+dr*i,c=col+dc*i;if(r<0||r>=ROWS||c<0||c>=COLS||b[r][c]!==p)break;n++;}
+    for (let i=1;i<4;i++){const r=row-dr*i,c=col-dc*i;if(r<0||r>=ROWS||c<0||c>=COLS||b[r][c]!==p)break;n++;}
+    if (n >= 4) return true;
+  }
+  return false;
+}
+
+// ===== KI: MINIMAX + ALPHA-BETA =====
+const COL_ORDER = [3,2,4,1,5,0,6];
+
+function bestMove(b, depth) {
+  let best = -Infinity, bestCol = 3;
+  for (const col of COL_ORDER) {
+    const row = getRow(b, col);
+    if (row < 0) continue;
+    b[row][col] = 2;
+    const s = minimax(b, depth-1, -Infinity, Infinity, false);
+    b[row][col] = 0;
+    if (s > best) { best = s; bestCol = col; }
+  }
+  return bestCol;
+}
+
+function minimax(b, depth, alpha, beta, isMax) {
+  const avail = COL_ORDER.filter(c => b[0][c] === 0);
+  if (avail.length === 0) return 0;
+
+  // Sofort-Sieg-Prüfung (schnell)
+  for (const col of avail) {
+    const row = getRow(b, col);
+    const p = isMax ? 2 : 1;
+    b[row][col] = p;
+    const won = quickWin(b, row, col, p);
+    b[row][col] = 0;
+    if (won) return isMax ? 100000 + depth : -(100000 + depth);
+  }
+
+  if (depth === 0) return evalBoard(b);
+
+  if (isMax) {
+    let best = -Infinity;
+    for (const col of avail) {
+      const row = getRow(b, col);
+      b[row][col] = 2;
+      best = Math.max(best, minimax(b, depth-1, alpha, beta, false));
+      b[row][col] = 0;
+      alpha = Math.max(alpha, best);
+      if (alpha >= beta) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const col of avail) {
+      const row = getRow(b, col);
+      b[row][col] = 1;
+      best = Math.min(best, minimax(b, depth-1, alpha, beta, true));
+      b[row][col] = 0;
+      beta = Math.min(beta, best);
+      if (alpha >= beta) break;
+    }
+    return best;
+  }
+}
+
+function getRow(b, col) {
+  for (let r = ROWS-1; r >= 0; r--)
+    if (b[r][col] === 0) return r;
+  return -1;
+}
+
+function evalBoard(b) {
+  let score = 0;
+  // Mittelkolumne bevorzugen
+  score += b.map(r => r[3]).filter(v => v === 2).length * 6;
+  // Alle 4er-Fenster
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c <= COLS-4; c++)
+      score += scoreWin([b[r][c],b[r][c+1],b[r][c+2],b[r][c+3]]);
+  for (let c = 0; c < COLS; c++)
+    for (let r = 0; r <= ROWS-4; r++)
+      score += scoreWin([b[r][c],b[r+1][c],b[r+2][c],b[r+3][c]]);
+  for (let r = 0; r <= ROWS-4; r++)
+    for (let c = 0; c <= COLS-4; c++)
+      score += scoreWin([b[r][c],b[r+1][c+1],b[r+2][c+2],b[r+3][c+3]]);
+  for (let r = 0; r <= ROWS-4; r++)
+    for (let c = 3; c < COLS; c++)
+      score += scoreWin([b[r][c],b[r+1][c-1],b[r+2][c-2],b[r+3][c-3]]);
+  return score;
+}
+
+function scoreWin(w) {
+  const ai  = w.filter(x => x === 2).length;
+  const hu  = w.filter(x => x === 1).length;
+  const em  = w.filter(x => x === 0).length;
+  if (ai === 3 && em === 1) return 50;
+  if (ai === 2 && em === 2) return 10;
+  if (hu === 3 && em === 1) return -80;
+  if (hu === 2 && em === 2) return -5;
+  return 0;
+}
+
+// ===== HEADER =====
+function updateHdr() {
+  document.getElementById('p1score').textContent = scores[0];
+  document.getElementById('p2score').textContent = scores[1];
+  const p1b = document.getElementById('p1b');
+  const p2b = document.getElementById('p2b');
+  const mid = document.getElementById('hdr-mid');
+  if (gameOver) {
+    p1b.classList.remove('active'); p2b.classList.remove('active');
+    mid.textContent = '🏁';
+  } else if (curPlayer === 1) {
+    p1b.classList.add('active'); p2b.classList.remove('active');
+    mid.textContent = '← am Zug';
+  } else {
+    p1b.classList.remove('active'); p2b.classList.add('active');
+    mid.textContent = 'am Zug →';
+  }
+}
+
+// ===== RESIZE =====
+function updateCellSize() {
+  const h = window.innerHeight;
+  const w = window.innerWidth;
+  const boardPad = 16; // 8px × 2
+  const gapH = (ROWS-1) * 4;
+  const gapW = (COLS-1) * 4;
+  const byH = Math.floor((h - 50 - boardPad - gapH - 16) / ROWS);
+  const byW = Math.floor((w - boardPad - gapW - 32) / COLS);
+  const cell = Math.min(byH, byW, 60);
+  document.documentElement.style.setProperty('--cell', Math.max(cell, 34) + 'px');
+}
+window.addEventListener('resize', updateCellSize);
+window.addEventListener('orientationchange', () => setTimeout(updateCellSize, 150));
+
+// ===== SERVICE WORKER =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', {scope: './'})
+    .then(reg => {
+      reg.update();
+      reg.addEventListener('updatefound', () => {
+        reg.installing.addEventListener('statechange', function() {
+          if (this.state === 'activated') location.reload();
+        });
+      });
+    });
+}
+</script>
+</body>
+</html>
